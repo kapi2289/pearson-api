@@ -7,5 +7,5 @@ setup(name='pearson-api',
       author_email='kapi2289@gmail.com',
       url='https://github.com/kapi2289/pearson-api',
       packages=['pearson'],
-      requires=['requests', 'beautifulsoup4']
+      install_requires=['requests', 'beautifulsoup4']
       )
