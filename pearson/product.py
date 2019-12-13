@@ -25,8 +25,13 @@ class Product:
             r_solve = self.api.get("https://myenglishlab.pearson-intl.com/activities/{}/0/solve".format(activity_id),
                                    as_json=False)
             soup = bs(r_solve.text, "html.parser")
-            inputs = [e["name"] for e in soup.find("div", {"class": "taskContent"}).find_all() if
-                      e.get("name") is not None]
+
+            task_content = soup.find("div", {"class": "taskContent"})
+            if task_content is not None:
+                inputs = [e["name"] for e in task_content.find_all() if
+                          e.get("name") is not None]
+            else:
+                inputs = []
 
             data = {a: "" for a in inputs}
             data.update({
