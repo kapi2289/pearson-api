@@ -11,17 +11,40 @@ class Product:
         self.type = j.get("type")
         self.url = j.get("access", {}).get("student", {}).get("url")
         self.id = re.search("login/(.+?)\?", self.url).group(1)
+        self.user = None
         self.api = api
         self.login()
 
     def login(self):
         r = self.api.get(self.url, as_json=False)
         self.api.get("https://myenglishlab.pearson-intl.com/sso/login", as_json=False, cookies={"requested_url": r.url})
+        self.user = self.api.get("https://myenglishlab.pearson-intl.com/currentuser.json")
+
+    def get_exercise_links(self, exercise_id):
+        course_id = self.user["currentCourse"]
+        course = self.api.get("https://myenglishlab.pearson-intl.com/toc/courses/{}.json".format(course_id))
+        toc = course["toc"]
+        _id = str(exercise_id)
+
+        def extract(j):
+            subnodes = j.get("subnodes", [])
+            for s in subnodes:
+                if s.get("id") == _id:
+                    return j.get("id")
+                else:
+                    e = extract(s)
+                    if e:
+                        return e
+
+        parent_id = extract(toc)
+        links = self.api.get(
+            "https://myenglishlab.pearson-intl.com/toc/labels/course/{}/unit/{}".format(course_id, parent_id))
+        return links.get(_id, {}).get("node", {}).get("links", [])
 
     def get_answers(self, activity_id):
         tried_again = False
 
-        for i in range(5):
+        for _ in range(5):
             r_solve = self.api.get("https://myenglishlab.pearson-intl.com/activities/{}/0/solve".format(activity_id),
                                    as_json=False)
             soup = bs(r_solve.text, "html.parser")
