@@ -66,6 +66,12 @@ class Client:
             self.token = token
 
     def get_products(self):
-        r = self.get("https://english-dashboard.pearson.com/api/dashboard/v1/user/products")
+        url = "https://english-dashboard.pearson.com/api/dashboard/v1/user/products"
+        r = self.get(url)
+        if r.get("status") != 200:
+            self.refresh()
+            r = self.get(url, try_again=False)
+            if r.get("status") != 200:
+                return []
         products = r.get("result", {}).get("products", [])
         return [Product(p, self) for p in products]
