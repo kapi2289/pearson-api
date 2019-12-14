@@ -8,7 +8,9 @@ class Client:
     def __init__(self, username, password):
         self.session = requests.session()
         self.token = None
-        self.login(username, password)
+        self.username = username
+        self.password = password
+        self.login()
 
     def _request(self, url, method=None, as_json=True, try_again=True, **kwargs):
         headers = {}
@@ -36,10 +38,10 @@ class Client:
     def get(self, url, as_json=True, try_again=True, **kwargs):
         return self._request(url, "GET", as_json=as_json, try_again=try_again, **kwargs)
 
-    def login(self, username, password):
+    def login(self):
         data = {
-            "username": username,
-            "password": password,
+            "username": self.username,
+            "password": self.password,
         }
         r = self.post("https://english-dashboard.pearson.com/api/dashboard/v1/users/sign-in", json=data)
 
@@ -50,8 +52,8 @@ class Client:
             result = r_check.get("result", {})
             if result.get("status") == "COMPLETED":
                 if result.get("details") == "SUCCESS":
-                    r_gateway = self.post("https://sso.rumba.pearsoncmg.com/sso/gateway", as_json=False,
-                                          data=result.get("gatewayParameters"))
+                    self.post("https://sso.rumba.pearsoncmg.com/sso/gateway", as_json=False,
+                              data=result.get("gatewayParameters"))
                     self.token = result.get("token")
                     print("Success!")
                     break
@@ -59,8 +61,14 @@ class Client:
         else:
             raise TimeoutError("Request timed out!")
 
-    def refresh(self):
+    def refresh(self, try_again=True):
         r = self.get("https://english-dashboard.pearson.com/api/dashboard/v1/token/refresh", try_again=False)
+        status = r.get("status")
+        if status != 200 and try_again:
+            self.login()
+            self.refresh(try_again=False)
+        elif status != 200 and not try_again:
+            return
         token = r.get("result", {}).get("token")
         if token:
             self.token = token
