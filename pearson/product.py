@@ -41,12 +41,21 @@ class Product:
             "https://myenglishlab.pearson-intl.com/toc/labels/course/{}/unit/{}".format(course_id, parent_id))
         return links.get(_id, {}).get("node", {}).get("links", [])
 
-    def get_answers(self, activity_id):
+    def get_answers(self, activity_id, try_again=False):
         tried_again = False
 
         for _ in range(5):
-            r_solve = self.api.get("https://myenglishlab.pearson-intl.com/activities/{}/0/solve".format(activity_id),
-                                   as_json=False)
+            if try_again:
+                r_solve = self.api.get(
+                    "https://myenglishlab.pearson-intl.com/activities/{}/0/try_again".format(activity_id),
+                    as_json=False)
+                new_activity_id = re.search("activities/(.+?)/0", r_solve.url)
+                if new_activity_id:
+                    activity_id = new_activity_id.group(1)
+                try_again = False
+            else:
+                r_solve = self.api.get(
+                    "https://myenglishlab.pearson-intl.com/activities/{}/0/solve".format(activity_id), as_json=False)
             soup = bs(r_solve.text, "html.parser")
 
             task_content = soup.find("div", {"class": "taskContent"})
