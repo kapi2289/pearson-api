@@ -10,10 +10,12 @@ class Product:
         self.name = j.get("name")
         self.type = j.get("type")
         self.url = j.get("access", {}).get("student", {}).get("url")
-        self.id = re.search("login/(.+?)\?", self.url).group(1)
         self.user = None
         self.api = api
-        self.login()
+        self.id = None
+        if "login/" in self.url:
+            self.id = re.search("login/(.+?)\?", self.url).group(1)
+            self.login()
 
     def login(self):
         r = self.api.get(self.url, as_json=False)
