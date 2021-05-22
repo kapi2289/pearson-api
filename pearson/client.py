@@ -8,6 +8,7 @@ class Client:
     def __init__(self, username, password):
         self.session = requests.session()
         self.token = None
+        self.user_id = None
         self.username = username
         self.password = password
         self.login()
@@ -55,6 +56,8 @@ class Client:
                     self.post("https://sso.rumba.pearsoncmg.com/sso/gateway", as_json=False,
                               data=result.get("gatewayParameters"))
                     self.token = result.get("token")
+                    r_user = self.get("https://english-dashboard.pearson.com/api/dashboard/v1/user/profile", try_again=False)
+                    self.user_id = r_user["result"]["id"]
                     print("Success!")
                     break
                 break
@@ -74,12 +77,12 @@ class Client:
             self.token = token
 
     def get_products(self):
-        url = "https://english-dashboard.pearson.com/api/dashboard/v1/user/products"
+        url = f"https://english-dashboard.pearson.com/api/dashboard/v2/user/{self.user_id}/products"
         r = self.get(url)
-        if r.get("status") != 200:
+        if r.get("code") != 200:
             self.refresh()
             r = self.get(url, try_again=False)
-            if r.get("status") != 200:
+            if r.get("code") != 200:
                 return []
-        products = r.get("result", {}).get("products", [])
+        products = r.get("data", {}).get("products", [])
         return [Product(p, self) for p in products]
